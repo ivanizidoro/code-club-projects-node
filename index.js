@@ -1,68 +1,101 @@
 const express = require('express')
 const uuid = require('uuid')
-
-const port = 3000
 const app = express()
+const port = 3000
+
 app.use(express.json())
 
-
-const users = []
+const pedidos = []
 
 const checkUserId = (request, response, next) => {
-
     const { id } = request.params
 
-    const index = users.findIndex(user => user.id === id)
-
+    const index = pedidos.findIndex(item => item.id === id)
 
     if (index < 0) {
-        return response.status(404).json({ error: "User not found" })
+        return response.status(404).json({ message: "User not found!!" })
     }
 
-    request.userIndex = index
-    request.userId = id
+    request.pedidoId = index
+
+    next()
 
 }
 
 
-app.get('/users', (request, response) => {
-    return response.json(users)
+const methodRequest = (request, response, next) => {
+    console.log(`Tipo de requisição =>  ${request.method}`)
+    console.log(`Url => ${request.url}`)
+    request.statusPedido = "Em preparação"
+    next()
+}
+
+
+
+app.post('/order', methodRequest, (request, response) => {
+
+    const { order, clientName, price } = request.body
+
+    let status = request.statusPedido
+
+    const pedido = { id: uuid.v4(), order, clientName, price, status }
+
+    pedidos.push(pedido)
+
+    return response.status(201).json(pedido)
+
 })
 
-app.post('/users', (request, response) => {
-    const { name, age } = request.body
-    const index = request.userIndex
-    const id = request.use
-
-    const user = { id: uuid.v4(), name, age }
-
-    users.push(user)
-
-    return response.status(201).json(users)
+app.get('/order', methodRequest, (request, response) => {
+    return response.json(pedidos)
 })
 
-app.put('/users/:id', checkUserId, (request, response) => {
-    const { name, age } = request.body
+app.put('/order/:id', checkUserId, methodRequest, (request, response) => {
 
-    const updateUser = { id, name, age }
+    const { id } = request.params
 
-    const index = users.findIndex(user => user.id === id)
+    const { order, clientName, price, statusPedido } = request.body
 
-    users[index] = updateUser
+    let status = request.statusPedido
 
-    return response.json(updateUser)
+    const index = request.pedidoId
+
+    const newPedido = { id, order, clientName, price, status }
+
+    pedidos[index] = newPedido
+
+    return response.json(newPedido)
+
 })
 
-app.delete('/users/:id', checkUserId, (request, response) => {
-    const index = request.userIndex
+app.delete('/order/:id', methodRequest, checkUserId, (request, response) => {
 
-    users.splice(index, 1)
+    const index = request.pedidoId
+
+    pedidos.splice(index, 1)
 
     return response.status(204).json()
 })
 
+app.get('/order/:id', checkUserId, methodRequest, (request, response) => {
+
+    const index = request.pedidoId
+
+    return response.json(pedidos[index])
+})
+
+app.patch('/order/:id', checkUserId, methodRequest, (request, response) => {
+
+    const index = request.pedidoId
+
+    pedidos[index].status = "pronto"
+
+    console.log(pedidos[index].status)
+
+    return response.json()
+})
 
 
 app.listen(port, () => {
-    console.log(`🚀 Server started on port port ${port}`)
+    console.log('Server OnLine 🚀')
 })
